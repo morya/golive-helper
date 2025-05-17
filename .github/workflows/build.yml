@@ -1,0 +1,40 @@
+name: Build and Upload Artifacts
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  build-windows:
+    runs-on: windows-2019
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Install PyInstaller
+        run: pip install pyinstaller
+
+      - name: Build executable
+        run: |
+          pyinstaller --onefile --noconsole main.py
+
+      - name: Archive build artifact
+        run: |
+          powershell -Command "if (!(Test-Path dist)) { mkdir dist }"
+          move .\dist\main.exe dist\golive-helper.exe
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: py-scrm
+          path: dist/golive-helper.exe
