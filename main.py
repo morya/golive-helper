@@ -1,22 +1,35 @@
+#coding=utf-8
+
 import sys
-from PySide6.QtWidgets import (
-    QApplication, QDialog, QVBoxLayout, QHBoxLayout, QRadioButton, QButtonGroup,
-    QLabel, QLineEdit, QPushButton, QWidget, QSpacerItem, QSizePolicy
+import logging
+import os.path
+
+import configparser
+
+from PySide6.QtCore import (
+    QStandardPaths,
 )
+
+from PySide6.QtGui import *
+from PySide6.QtWidgets import *
+
+
+default_address = 'http://teacher.eagleplan.fun'
+
 
 class AddressDialog(QDialog):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("地址选择")
+        self.setWindowTitle("版本切换")
         self.init_ui()
 
     def init_ui(self):
         main_layout = QVBoxLayout()
-
+        
         # Option group
         option_layout = QHBoxLayout()
-        self.radio_default = QRadioButton("A: 默认地址")
-        self.radio_custom = QRadioButton("B: 自定义地址")
+        self.radio_default = QRadioButton("默认地址")
+        self.radio_custom = QRadioButton("自定义地址")
         self.radio_default.setChecked(True)
         option_group = QButtonGroup(self)
         option_group.addButton(self.radio_default)
@@ -27,10 +40,10 @@ class AddressDialog(QDialog):
 
         # Address input
         address_layout = QHBoxLayout()
-        label = QLabel("地址：")
         self.line_edit = QLineEdit()
         self.line_edit.setDisabled(True)
-        address_layout.addWidget(label)
+        self.line_edit.setPlaceholderText(default_address)
+        
         address_layout.addWidget(self.line_edit)
         main_layout.addLayout(address_layout)
 
@@ -47,7 +60,7 @@ class AddressDialog(QDialog):
 
         # Connect signals
         self.radio_default.toggled.connect(self.update_line_edit_state)
-        self.ok_button.clicked.connect(self.accept)
+        self.ok_button.clicked.connect(self.on_accepted)
         self.cancel_button.clicked.connect(self.reject)
 
     def update_line_edit_state(self):
@@ -56,10 +69,88 @@ class AddressDialog(QDialog):
         else:
             self.line_edit.setDisabled(True)
 
-if __name__ == "__main__":
+    def get_ini_file(self):
+        try:
+            user_data_dir = QStandardPaths.writableLocation(QStandardPaths.AppDataLocation)
+            pp = os.path.join(user_data_dir, "golive-studio", "global.ini")
+            if not os.path.exists(pp):
+                print("golive not found")
+                return ""
+            return pp
+        except Exception as e:
+            print("golive not found")
+        return ""
+
+    def has_golive(self):
+        pp = self.get_ini_file()
+        if not pp:
+            QMessageBox.warning(self, "Warning", "请启动 Golive Studio 并关闭，再打开此程序")
+            return False
+        return True
+
+    def show_warn(self, msg="golive not found"):
+        QMessageBox.warning(self, "Warning", "请输入合理地址")
+        self.line_edit.setFocus()
+
+    def valid_check(self):
+        txt = self.line_edit.text()
+        if txt == "":
+            self.show_warn()
+            return False
+        if not txt.startswith("http://") and not txt.startswith("https://"):
+            self.show_warn()
+            return False
+        return True
+
+    def write_ini(self, fn, address):
+        ## 把 fn 作为 ini 文件，写入配置
+        ## 写入如下区块 
+        # Golive
+        # ChatURL=
+        
+        p = configparser.ConfigParser()
+        p.read(fn)
+        if "Golive" not in p.sections():
+            p.add_section("Golive")
+            
+        p.set("Golive", "ChatURL", address)
+        with open(fn, "w") as f:
+            p.write(f)
+
+        QMessageBox.information(self, "Information", "写入配置成功")
+
+    def on_accepted(self):
+        logging.info("on_accepted")
+        if not self.has_golive():
+            logging.info("golive not found")
+            return
+
+        addr = default_address
+        if self.radio_default.isChecked():
+            addr = default_address
+        else:
+            if not self.valid_check():
+                logging.info("not valid address")
+                return
+            addr = self.line_edit.text()
+        
+        pp = self.get_ini_file()
+        self.write_ini(pp, addr)
+        return None
+
+
+def main():
+    print("main")
+    logging.info("main")
     app = QApplication(sys.argv)
     dialog = AddressDialog()
-    if dialog.exec():
-        print("确定")
-    else:
-        print("取消")
+    dialog.exec()
+    
+
+if __name__ == "__main__":
+    try:
+        logging.basicConfig(level=logging.INFO,
+                            format='%(asctime)s [%(filename)s:%(lineno)d] - %(message)s')
+        main()
+    except Exception as e:
+        logging.error(f"An error occurred: {e}")
