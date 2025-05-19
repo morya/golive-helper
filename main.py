@@ -21,7 +21,9 @@ def get_profile(pp):
     p = configparser.ConfigParser()
     p.optionxform = lambda option: option
     p.read(pp, encoding='utf-8-sig')
-    profile = p.get("Basic", "Profile")
+    if not p.has_option("Basic", "ProfieDir"):
+        return "未命名"
+    profile = p.get("Basic", "ProfieDir")
     return profile
 
 
