@@ -19,6 +19,7 @@ default_address = 'http://teacher.eagleplan.fun'
 
 def get_profile(pp):
     p = configparser.ConfigParser()
+    p.optionxform = lambda option: option
     p.read(pp, encoding='utf-8-sig')
     profile = p.get("Basic", "Profile")
     return profile
@@ -26,6 +27,7 @@ def get_profile(pp):
 
 def save_address(cfg_path, address):
     p = configparser.ConfigParser()
+    p.optionxform = lambda option: option
     p.read(cfg_path, encoding='utf-8-sig')
     if "Golive" not in p.sections():
         p.add_section("Golive")
