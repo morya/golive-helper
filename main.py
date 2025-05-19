@@ -17,6 +17,22 @@ from PySide6.QtWidgets import *
 default_address = 'http://teacher.eagleplan.fun'
 
 
+def get_profile(pp):
+    p = configparser.ConfigParser()
+    p.read(pp, encoding='utf-8-sig')
+    profile = p.get("Basic", "Profile")
+    return profile
+
+
+def save_address(cfg_path, address):
+    p = configparser.ConfigParser()
+    p.read(cfg_path, encoding='utf-8-sig')
+    if "Golive" not in p.sections():
+        p.add_section("Golive")
+    p.set("Golive", "ChatURL", address)
+    p.write(open(cfg_path, "w", encoding='utf-8-sig'))
+
+
 class AddressDialog(QDialog):
     def __init__(self):
         super().__init__()
@@ -72,19 +88,27 @@ class AddressDialog(QDialog):
     def get_ini_file(self):
         try:
             user_data_dir = QStandardPaths.writableLocation(QStandardPaths.AppDataLocation)
-            pp = os.path.join(user_data_dir, "golive-studio", "global.ini")
-            logging.info(f"golive ini file should be: {pp}")
-            if not os.path.exists(pp):
+            global_file = os.path.join(user_data_dir, "..", "golive-studio", "global.ini")
+            if not os.path.exists(global_file):
+                logging.info(f"global.ini not found, {global_file}")
+                return ""
+            profile = get_profile(global_file)
+            basic_file = os.path.join(user_data_dir, "..", "golive-studio", "basic", "profiles", profile, "basic.ini")
+            if not os.path.exists(basic_file):
+                logging.info(f"basic.ini not found, {basic_file}")
+                return ""
+    
+            if not os.path.exists(basic_file):
                 logging.info("golive not found")
                 return ""
-            return pp
+            return basic_file
         except Exception as e:
             logging.exception("golive not found")
         return ""
 
     def has_golive(self):
-        pp = self.get_ini_file()
-        if not pp:
+        basic_file = self.get_ini_file()
+        if not basic_file:
             QMessageBox.warning(self, "Warning", "请启动 Golive Studio 并关闭，再打开此程序")
             return False
         return True
@@ -108,16 +132,7 @@ class AddressDialog(QDialog):
         ## 写入如下区块 
         # Golive
         # ChatURL=
-        
-        p = configparser.ConfigParser()
-        p.read(fn)
-        if "Golive" not in p.sections():
-            p.add_section("Golive")
-            
-        p.set("Golive", "ChatURL", address)
-        with open(fn, "w") as f:
-            p.write(f)
-
+        save_address(fn, address)
         QMessageBox.information(self, "Information", "写入配置成功")
 
     def on_accepted(self):
@@ -135,8 +150,8 @@ class AddressDialog(QDialog):
                 return
             addr = self.line_edit.text()
         logging.info(f"address set to: {addr}")
-        pp = self.get_ini_file()
-        self.write_ini(pp, addr)
+        basic_file = self.get_ini_file()
+        self.write_ini(basic_file, addr)
         return None
 
 
