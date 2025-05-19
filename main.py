@@ -1,7 +1,7 @@
 #coding=utf-8
 
 import sys
-import logging
+import logging.config
 import os.path
 
 import configparser
@@ -73,12 +73,13 @@ class AddressDialog(QDialog):
         try:
             user_data_dir = QStandardPaths.writableLocation(QStandardPaths.AppDataLocation)
             pp = os.path.join(user_data_dir, "golive-studio", "global.ini")
+            logging.info(f"golive ini file should be: {pp}")
             if not os.path.exists(pp):
-                print("golive not found")
+                logging.info("golive not found")
                 return ""
             return pp
         except Exception as e:
-            print("golive not found")
+            logging.exception("golive not found")
         return ""
 
     def has_golive(self):
@@ -133,10 +134,49 @@ class AddressDialog(QDialog):
                 logging.info("not valid address")
                 return
             addr = self.line_edit.text()
-        
+        logging.info(f"address set to: {addr}")
         pp = self.get_ini_file()
         self.write_ini(pp, addr)
         return None
+
+
+def cfgLogging():
+    LOGGING = {
+               'version': 1,
+               'disable_existing_loggers': True,
+               'formatters': {
+                              'default': {'format': '[%(asctime)-25s] [%(relativeCreated)-15s] %(name)-12s pid:%(process)d %(message)s'},
+                               # default': {
+                               #           'format' : '%(asctime)s %(message)s',
+                               #           'datefmt' : '%Y-%m-%d %H:%M:%S'
+                               # }
+                },
+               'handlers': {
+                            'console':{
+                                       'level':'INFO',
+                                       'class':'logging.StreamHandler',
+                                       'formatter': 'default'
+                            },
+                            'file': {
+                                     'level': 'DEBUG',
+                                     'class': 'logging.handlers.RotatingFileHandler',
+                                     'formatter': 'default',
+                                     'filename' : 'run.log',
+                                     'maxBytes':    20 * 1024 * 1024,  # 10M
+                                     'backupCount': 5,
+                                     'encoding' : 'utf8',
+                            }
+                },
+               'loggers' : {
+                            # 定义了一个logger
+                            '' : {
+                                          'level' : 'DEBUG',
+                                          'handlers' : ['console', 'file'],
+                                          'propagate' : True
+                            }
+                }
+    }
+    logging.config.dictConfig(LOGGING)
 
 
 def main():
@@ -149,8 +189,7 @@ def main():
 
 if __name__ == "__main__":
     try:
-        logging.basicConfig(level=logging.INFO,
-                            format='%(asctime)s [%(filename)s:%(lineno)d] - %(message)s')
+        cfgLogging()
         main()
     except Exception as e:
         logging.error(f"An error occurred: {e}")
