@@ -34,7 +34,7 @@ def save_address(cfg_path, address):
     if "Golive" not in p.sections():
         p.add_section("Golive")
     p.set("Golive", "ChatURL", address)
-    p.write(open(cfg_path, "w", encoding='utf-8-sig'))
+    p.write(open(cfg_path, "w", encoding='utf-8-sig'), space_around_delimiters=False)
 
 
 class AddressDialog(QDialog):
